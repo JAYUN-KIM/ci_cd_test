@@ -1,19 +1,33 @@
 pipeline {
     agent any
+
+    environment {
+        DOCKER_IMAGE = "jayunkim/ci_cd_test:latest" // Docker Hub repo 이름
+    }
+
     stages {
+        stage('Clone') {
+            steps {
+                git url: 'https://github.com/JAYUN-KIM/ci_cd_test.git',
+                    credentialsId: 'github-token',
+                    branch: 'main'
+            }
+        }
+
         stage('Build') {
             steps {
-                echo '🛠️ Building the project...'
+                echo "Building Project..."
             }
         }
-        stage('Test') {
+
+        stage('Docker Build & Push') {
             steps {
-                echo '✅ Running tests...'
-            }
-        }
-        stage('Deploy') {
-            steps {
-                echo '🚀 Deploying application...'
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-cred') {
+                        def app = docker.build(DOCKER_IMAGE)
+                        app.push()
+                    }
+                }
             }
         }
     }
