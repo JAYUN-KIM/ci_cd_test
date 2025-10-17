@@ -2,32 +2,39 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "jayunkim/ci_cd_test:latest" // Docker Hub repo 이름
+        DOCKERHUB_CREDENTIAL = 'docker-hub-cred'  // Jenkins에 저장한 Docker Hub Credential ID
+        IMAGE_NAME = 'jayunkim/ci_cd_test'            // Docker Hub Repo
     }
 
     stages {
-        stage('Clone') {
+        stage('GitHub Push Detected') {
             steps {
-                git url: 'https://github.com/JAYUN-KIM/ci_cd_test.git',
-                    credentialsId: 'github-token',
-                    branch: 'main'
+                echo 'GitHub Push Detected!'
             }
         }
 
-        stage('Build') {
-            steps {
-                echo "Building Project..."
-            }
-        }
-
-        stage('Docker Build & Push') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-cred') {
-                        def app = docker.build(DOCKER_IMAGE)
-                        app.push()
+                    docker.build("${IMAGE_NAME}:latest")
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKERHUB_CREDENTIAL) {
+                        docker.image("${IMAGE_NAME}:latest").push()
                     }
                 }
+            }
+        }
+
+        stage('Deploy via Argo CD') {
+            steps {
+                echo 'Deploying to Kubernetes via Argo CD...'
+                // 여기에 Argo CD CLI 호출 명령어 또는 kubectl apply 등 추가 가능
             }
         }
     }
